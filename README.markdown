@@ -1,5 +1,9 @@
+This is a port of Scrum for Trello to a greasemonkey userscript so that it can be used in Firefox.
+
+* * *
+
 Scrum for Trello
-===========
+----------------
 
 Scrum for Trello adds functionality to the awesome trello.com for use in Scrum projects.
 
