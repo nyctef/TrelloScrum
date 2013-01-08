@@ -1,3 +1,18 @@
+// ==UserScript==
+// @name        trelloscrum
+// @namespace   http://example.com/
+// @include     https://trello.com/*
+// @version     0.1
+// @grant       GM_getResourceURL
+// @grant       GM_getResourceText
+// @grant       GM_addStyle
+// @resource    storypointsicon storypoints-icon.png
+// @resource    pointsdone points-done.png
+// @resource    css trelloscrum.css
+// ==/UserScript==
+
+console.log("test");
+
 /*
 ** Scrum for Trello- https://github.com/Q42/TrelloScrum
 ** Adds Scrum to your Trello
@@ -21,13 +36,18 @@ var _pointSeq = ['?', 0, 1, 2, 3, 5, 8, 13, 20];
 //attributes representing points values for card
 var _pointsAttr = ['cpoints', 'points'];
 
+console.log(GM_getResourceURL('storypointsicon'));
+
+// load trelloscrum css
+var cssTxt = GM_getResourceText("css");
+GM_addStyle(cssTxt);
 
 //internals
 var filtered = false, //watch for filtered cards
 	reg = /[\(](\x3f|\d*\.?\d+)([\)])\s?/m, //parse regexp- accepts digits, decimals and '?', surrounded by ()
 	regC = /[\[](\x3f|\d*\.?\d+)([\]])\s?/m, //parse regexp- accepts digits, decimals and '?', surrounded by []
-	iconUrl = chrome.extension.getURL('images/storypoints-icon.png'),
-	pointsDoneUrl = chrome.extension.getURL('images/points-done.png');
+	iconUrl = GM_getResourceURL('storypointsicon'),
+	pointsDoneUrl = GM_getResourceURL('pointsdone');
 
 var Utils = (function(){
 	function _roundValue(_val){
@@ -37,6 +57,12 @@ var Utils = (function(){
 		roundValue : _roundValue
 	}
 })();
+
+// get jquery
+var $ = unsafeWindow.jQuery;
+
+console.log("1");
+console.log($);
 
 //what to do when DOM loads
 $(function(){
@@ -101,6 +127,8 @@ $(function(){
 	readList($('.list'));
 
 });
+
+console.log("2");
 
 //.list pseudo
 function List(el){
@@ -169,6 +197,8 @@ function List(el){
 	this.calc();
 };
 
+console.log("3");
+
 //.list-card pseudo
 function ListCard(el, identifier){
 	if(el.listCard && el.listCard[identifier]) return;
@@ -220,6 +250,8 @@ function ListCard(el, identifier){
 	this.refresh();
 };
 
+console.log("4");
+
 //forcibly calculate list totals
 function calcPoints($el){
 	($el||$('.list')).each(function(){if(this.list)this.list.calc()})
@@ -244,6 +276,7 @@ function showPointPicker() {
 	}))
 };
 
+console.log("5");
 
 //for export
 var $excel_btn,$excel_dl;
@@ -266,6 +299,8 @@ function checkExport() {
 			.click(showExcelExport)
 			.insertAfter($js_btn);
 }
+
+console.log("6");
 
 function showExcelExport() {
 	$excel_btn.text('Generating...');
@@ -317,3 +352,4 @@ function showExcelExport() {
 	return false
 };
 
+console.log("end");
