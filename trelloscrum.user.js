@@ -80,6 +80,7 @@ $(function () {
     //for storypoint picker
     $(".card-detail-title .edit-controls").live('DOMNodeInserted', showPointPicker);
 
+    // if an element with the list class is added to the dom, run readlist on it and compute total
     $('body').bind('DOMSubtreeModified DOMNodeInserted', function (e) {
         if ($(e.target).hasClass('list')) {
             readList($(e.target));
@@ -116,14 +117,13 @@ $(function () {
     }
 
     function readList($c) {
-
         $c.each(function () {
             if (!this.list) new List(this);
             else if (this.list.calc) this.list.calc();
         })
     }
 
-
+    // run readlist on all existing list elements
     readList($('.list'));
 
 });
@@ -131,6 +131,7 @@ $(function () {
 console.log("2");
 
 //.list pseudo
+// init list stuff, called by readList($c$)
 function List(el) {
     if (el.list) return;
     el.list = this;
@@ -140,6 +141,7 @@ function List(el) {
 		to,
 		to2;
 
+    // create the list-total span, and re-add it if it gets removed
     var $total = $('<span class="list-total">')
 		.bind('DOMNodeRemovedFromDocument', function () {
 		    clearTimeout(to);
@@ -149,6 +151,7 @@ function List(el) {
 		})
 		.appendTo($list.find('.list-header h2'));
 
+    // listen for when stuff is added to the list
     $list.bind('DOMNodeInserted', function (e) {
         if ($(e.target).hasClass('list-card') && !e.target.listCard) {
             clearTimeout(to2);
@@ -156,6 +159,7 @@ function List(el) {
         }
     });
 
+    // called on new cards
     function readCard($c) {
         $c.each(function () {
             var that = this,
@@ -193,6 +197,7 @@ function List(el) {
         }
     };
 
+    // run readCard on all the current list cards
     readCard($list.find('.list-card'));
     this.calc();
 };
