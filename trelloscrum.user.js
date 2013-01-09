@@ -9,6 +9,7 @@
 // @resource    storypointsicon storypoints-icon.png
 // @resource    pointsdone points-done.png
 // @resource    css trelloscrum.css
+// @require     jquery-1.7.1.min.js
 // ==/UserScript==
 
 console.log("test");
@@ -59,7 +60,7 @@ var Utils = (function () {
 })();
 
 // get jquery
-var $ = unsafeWindow.jQuery;
+//var $ = unsafeWindow.jQuery;
 
 console.log("1");
 console.log($);
