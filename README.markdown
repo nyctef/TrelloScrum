@@ -1,6 +1,12 @@
+Scrum for Trello for Firefox
+============================
+
 This is a port of Scrum for Trello to a greasemonkey userscript so that it can be used in Firefox.
 
-* * *
+To use this, you'll need to install [Greasemonkey](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/). 
+Then, open the trelloscrum.user.js file in Firefox. Greasemonkey should pop up and ask you to install it as a userscript.
+
+Original README follows:
 
 Scrum for Trello
 ----------------
