@@ -27,11 +27,12 @@
 ** Morgan Craft <https://github.com/mgan59>
 ** Frank Geerlings <https://github.com/frankgeerlings>
 ** Cedric Gatay <https://github.com/CedricGatay>
+** Kit Glennon <https://github.com/kitglen>
 **
 */
 
 //default story point picker sequence
-var _pointSeq = ['?', 0, 1, 2, 3, 5, 8, 13, 20];
+var _pointSeq = ['?', 0, .5, 1, 2, 3, 5, 8, 13, 21];
 //attributes representing points values for card
 var _pointsAttr = ['cpoints', 'points'];
 
@@ -46,14 +47,7 @@ var filtered = false, //watch for filtered cards
 	iconUrl = GM_getResourceURL('storypointsicon'),
 	pointsDoneUrl = GM_getResourceURL('pointsdone');
 
-var Utils = (function () {
-    function _roundValue(_val) {
-        return (Math.floor(_val * 100) / 100);
-    }
-    return {
-        roundValue: _roundValue
-    }
-})();
+function round(_val) {return (Math.floor(_val * 100) / 100)};
 
 //what to do when DOM loads
 $(function () {
@@ -62,7 +56,8 @@ $(function () {
         setTimeout(function () {
             try {
                 filtered = $('.js-filter-cards').hasClass('is-on');
-                calcPoints();
+				calcPoints()
+				calcListPoints()
             } catch (err) {
                 console.log("updateFilters.setTimeout", err);
             }
@@ -71,73 +66,55 @@ $(function () {
     $('.js-toggle-label-filter, .js-select-member, .js-due-filter, .js-clear-all').live('mouseup', updateFilters);
     $('.js-input').live('keyup', updateFilters);
 
-
     //for storypoint picker
     $(".card-detail-title .edit-controls").live('DOMNodeInserted', showPointPicker);
 
-    // if an element with the list class is added to the dom, run readlist on it and compute total
-    $('body').bind('DOMSubtreeModified DOMNodeInserted', function (e) {
-        if ($(e.target).hasClass('list')) {
-            try {
-                readList($(e.target));
-                computeTotal();
-            } catch (err) {
-                console.log("body bind", err);
-            }
+	$('.js-share').live('mouseup',function(){
+		setTimeout(checkExport,500)
         }
     });
 
+	calcListPoints();
 
-    $('.js-share').live('mouseup', function () {
-        try {
-            setTimeout(checkExport)
         } catch (err) {
             console.log("js share mouseup", err);
         }
-    });
-
-    function computeTotal() {
-        try {
-            var $title = $("#board-header");
-            var $total = $("#board-header .list-total");
-            if ($total.length == 0) {
-                $total = $("<span class='list-total'>").appendTo($title);
-            }
-            for (var i in _pointsAttr) {
-                var score = 0;
-                var attr = _pointsAttr[i];
-                $("#board .list-total ." + attr).each(function () {
-                    var value = $(this).text();
-                    if (value && !isNaN(value)) {
-                        score += parseFloat(value);
-                    }
-                });
-                var $countElem = $('#board-header .list-total .' + attr);
-                if ($countElem.length > 0) {
-                    $countElem.remove();
-                }
-                $total.append("<span class='" + attr + "'>" + Utils.roundValue(score) + "</span>");
-            }
-        } catch (err) {
-            console.log("computeTotal", err);
-        }
-    }
-
-    function readList($c) {
-        try {
-            $c.each(function () {
-                if (!this.list) new List(this);
-                else if (this.list.calc) this.list.calc();
-            })
-        } catch (err) {
-            console.log("readList", err);
-        }
-    }
-
-    // run readlist on all existing list elements
-    readList($('.list'));
-
 });
+
+document.body.addEventListener('DOMNodeInserted',function(e){
+	if(e.target.id=='board') setTimeout(calcListPoints);
+});
+
+//calculate board totals
+var ctto;
+    function computeTotal() {
+	clearTimeout(ctto);
+	ctto = setTimeout(function(){
+		var $title = $('#board-header');
+		var $total = $title.children('.list-total').empty();
+		if ($total.length == 0)
+			$total = $('<span class="list-total">').appendTo($title);
+
+            for (var i in _pointsAttr) {
+			var score = 0,
+				attr = _pointsAttr[i];
+			$('#board .list-total .'+attr).each(function(){
+				score+=parseFloat(this.textContent)||0;
+			});
+			$total.append('<span class="'+attr+'">'+(round(score)||'')+'</span>');
+		}
+	});
+};
+    }
+
+//calculate list totals
+function calcListPoints($el){
+	($el||$('.list')).each(function(){
+		if(!this.list) new List(this);
+		else if(this.list.calc) this.list.calc();
+	})
+};
+    }
 
 //.list pseudo
 // init list stuff, called by readList($c$)
@@ -146,89 +123,50 @@ function List(el) { try {
     el.list = this;
 
     var $list = $(el),
+		$total=$('<span class="list-total">'),
 		busy = false,
 		to,
 		to2;
 
-    // create the list-total span, and re-add it if it gets removed
-    var $total = $('<span class="list-total">')
-		.bind('DOMNodeRemovedFromDocument', function () {
-		    try {
-		        clearTimeout(to);
-		        to = setTimeout(function () {
-		            $total.appendTo($list.find('.list-header h2'))
-		        })
-		    } catch (err) {
-		        console.log("List bind DOMNodeRemovedFromDoc", err);
-		    }
-		})
-		.appendTo($list.find('.list-header h2'));
-
-    // listen for when stuff is added to the list
-    $list.bind('DOMNodeInserted', function (e) {
-        try {
-            if ($(e.target).hasClass('list-card') && !e.target.listCard) {
-                clearTimeout(to2);
-                to2 = setTimeout(readCard, 0, $(e.target))
-            }
-        } catch (err) {
-            console.log("List bind DOMNodeInserted", err);
-        }
-    });
-
     // called on new cards
     function readCard($c) {
-        try {
+		if($c.target) $c = $($c.target).filter('.list-card:not(.placeholder)');
             $c.each(function () {
-                var that = this,
-                         to2,
-                         busy = false;
-                if ($(that).hasClass('placeholder')) return;
-                if (!that.listCard) {
-                    for (var i in _pointsAttr) {
-                        new ListCard(that, _pointsAttr[i])
-                    }
-                    $(that).bind('DOMNodeInserted', function (e) {
-                        try {
-                            if (!busy && ($(e.target).hasClass('list-card-title') || e.target == that)) {
-                                clearTimeout(to2);
-                                to2 = setTimeout(function () {
-                                    busy = true;
-                                    for (var i in that.listCard) {
-                                        that.listCard[i].refresh();
-                                    }
-                                    busy = false;
-                                });
-                            }
-                        } catch (err) {
-                            console.log("List readCard bind DomNodeInserted", err);
-                        }
-                    });
-                }
-            })
+			if(!this.listCard) for (var i in _pointsAttr)
+				new ListCard(this,_pointsAttr[i]);
+			else for (var i in _pointsAttr)
+				setTimeout(this.listCard[_pointsAttr[i]].refresh);
+		});
         } catch (err) {
             console.log("List readCard", err);
         }
     };
 
-    this.calc = function () {
-        try {
-            $total.empty();
-            for (var i in _pointsAttr) {
-                var score = 0;
-                var attr = _pointsAttr[i];
-                $list.find('.list-card').each(function () { if (this.listCard && !isNaN(Number(this.listCard[attr].points))) score += Number(this.listCard[attr].points) });
-                var scoreTruncated = Utils.roundValue(score);
+	this.calc = function(e){
+		if(e&&e.target&&!$(e.target).hasClass('list-card')) return;
+		clearTimeout(to);
+		to = setTimeout(function(){
+			$total.empty().appendTo($list.find('.list-title'));
+			for (var i in _pointsAttr){
+				var score=0,
+					attr = _pointsAttr[i];
+				$list.find('.list-card:not(.placeholder)').each(function(){
+					if(!this.listCard) return;
+					if(!isNaN(Number(this.listCard[attr].points)))score+=Number(this.listCard[attr].points)
+				});
+				var scoreTruncated = round(score);
                 $total.append('<span class="' + attr + '">' + (scoreTruncated > 0 ? scoreTruncated : '') + '</span>');
-            }
-        } catch (err) {
-            console.log("List.calc", err);
-        }
+				computeTotal();
+			}
+		});
     };
 
-    // run readCard on all the current list cards
-    readCard($list.find('.list-card'));
-    this.calc();
+	$list.on('DOMNodeRemoved',this.calc).on('DOMNodeInserted',readCard);
+
+	setTimeout(function(){
+		readCard($list.find('.list-card'));
+		setTimeout(el.list.calc);
+	});
 
     } catch (err) {
         console.log("List", err);
@@ -239,6 +177,7 @@ function List(el) { try {
 function ListCard(el, identifier) {
     try {
     if (el.listCard && el.listCard[identifier]) return;
+
     //lazily create object
     if (!el.listCard) {
         el.listCard = {};
@@ -252,40 +191,34 @@ function ListCard(el, identifier) {
 		that = this,
 		busy = false,
 		to,
-		ptitle,
+		phref='',
 		$card = $(el),
-		$badge = $('<div class="badge badge-points point-count" style="background-image: url(' + iconUrl + ')"/>')
-			.bind('DOMSubtreeModified DOMNodeRemovedFromDocument', function (e) {
-			    try {
-			        if (busy) return;
-			        busy = true;
-			        clearTimeout(to);
-			        to = setTimeout(function () {
-			            $badge.prependTo($card.find('.badges'));
-			            busy = false;
-			        });
-			    } catch (err) {
-			        console.log("ListCard badge bind", err);
-			    }
-			});
+		$badge=$('<div class="badge badge-points point-count" style="background-image: url('+iconUrl+')"/>');
 
     this.refresh = function () {
-        try {
-            var $title = $card.find('a.list-card-title');
-            if (!$title[0]) return;
+		setTimeout(function(){
+			var $title=$card.find('a.list-card-title');
+			if(!$title[0])return;
             // $title[0].childNodes[0] is a hidden span that contains the internal number of the card
             var title = $title[0].childNodes[1].textContent;
+			var href = $title.attr('href');
+			if(title) el._title = title;
+			if(href!=phref) {
+				phref = href;
             parsed = title.match(regexp);
             points = parsed ? parsed[1] : -1;
-            if ($card.parent()[0]) {
-                $title[0].childNodes[1].textContent = title.replace(regexp, '');
-                $badge.text(that.points);
-                consumed ? $badge.addClass("consumed") : $badge.removeClass('consumed');
-                $badge.attr({ title: 'This card has ' + that.points + (consumed ? ' consumed' : '') + ' storypoint' + (that.points == 1 ? '.' : 's.') })
-            }
-        } catch (err) {
-            console.log("ListCard refresh", err);
-        }
+			}
+			setTimeout(function(){
+				$title[0].textContent = el._title = el._title.replace(regexp,'');
+				$badge
+					.text(that.points)
+					[(consumed?'add':'remove')+'Class']('consumed')
+					.attr({title: 'This card has '+that.points+ (consumed?' consumed':'')+' storypoint' + (that.points == 1 ? '.' : 's.')})
+					.prependTo($card.find('.badges'));
+				var list = $card.closest('.list');
+				if(list[0]) list[0].list.calc();
+			})
+		});
     };
 
     this.__defineGetter__('points', function () {
@@ -293,16 +226,11 @@ function ListCard(el, identifier) {
         return parsed && (!filtered || ($card.css('opacity') == 1 && $card.css('display') != 'none')) ? points : ''
     });
 
-    this.refresh();
+	setTimeout(that.refresh);
 
     } catch (err) {
         console.log("ListCard", err);
     }
-};
-
-//forcibly calculate list totals
-function calcPoints($el) {
-    ($el || $('.list')).each(function () { if (this.list) this.list.calc() })
 };
 
 //the story point picker
@@ -327,29 +255,23 @@ function showPointPicker() {
 //for export
 var $excel_btn, $excel_dl;
 window.URL = window.webkitURL || window.URL;
-window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
 
 function checkExport() {
-    if ($('form').find('.js-export-excel').length) return;
-    var $js_btn = $('form').find('.js-export-json');
-    if ($js_btn.length)
-        $excel_btn = $('<a>')
-			.attr({
-			    style: 'margin: 0 4px 4px 0;',
-			    class: 'button js-export-excel',
-			    href: '#',
-			    target: '_blank',
-			    title: 'Open downloaded file with Excel'
-			})
-			.text('Excel')
+	if($excel_btn && $excel_btn.filter(':visible').length) return;
+	if($('.pop-over-list').find('.js-export-excel').length) return;
+	var $js_btn = $('.pop-over-list').find('.js-export-json');
+	var $ul = $js_btn.closest('ul:visible');
+	if(!$js_btn.length) return;
+	$js_btn.parent().after($('<li>').append(
+		$excel_btn = $('<a href="#" target="_blank" title="Open downloaded file with Excel">Excel</a>')
 			.click(showExcelExport)
-			.insertAfter($js_btn);
-}
+		))
+};
 
 function showExcelExport() {
     $excel_btn.text('Generating...');
 
-    $.getJSON($('form').find('.js-export-json').attr('href'), function (data) {
+	$.getJSON($('.pop-over-list').find('.js-export-json').attr('href'), function(data) {
         var s = '<table id="export" border=1>';
         s += '<tr><th>Points</th><th>Story</th><th>Description</th></tr>';
         $.each(data['lists'], function (key, list) {
@@ -369,8 +291,7 @@ function showExcelExport() {
         });
         s += '</table>';
 
-        var bb = new BlobBuilder();
-        bb.append(s);
+		var blob = new Blob([s],{type:'application/ms-excel'});
 
         var board_title_reg = /.*\/board\/(.*)\//;
         var board_title_parsed = document.location.href.match(board_title_reg);
@@ -382,7 +303,7 @@ function showExcelExport() {
 				$excel_dl = $('<a>')
 					.attr({
 					    download: board_title + '.xls',
-					    href: window.URL.createObjectURL(bb.getBlob('application/ms-excel'))
+						href: window.URL.createObjectURL(blob)
 					})
 			);
 
