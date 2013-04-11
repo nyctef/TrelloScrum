@@ -71,14 +71,9 @@ $(function () {
 
 	$('.js-share').live('mouseup',function(){
 		setTimeout(checkExport,500)
-        }
     });
 
 	calcListPoints();
-
-        } catch (err) {
-            console.log("js share mouseup", err);
-        }
 });
 
 document.body.addEventListener('DOMNodeInserted',function(e){
@@ -105,7 +100,6 @@ var ctto;
 		}
 	});
 };
-    }
 
 //calculate list totals
 function calcListPoints($el){
@@ -114,11 +108,10 @@ function calcListPoints($el){
 		else if(this.list.calc) this.list.calc();
 	})
 };
-    }
 
 //.list pseudo
 // init list stuff, called by readList($c$)
-function List(el) { try {
+function List(el) { 
     if (el.list) return;
     el.list = this;
 
@@ -137,9 +130,6 @@ function List(el) { try {
 			else for (var i in _pointsAttr)
 				setTimeout(this.listCard[_pointsAttr[i]].refresh);
 		});
-        } catch (err) {
-            console.log("List readCard", err);
-        }
     };
 
 	this.calc = function(e){
@@ -167,10 +157,6 @@ function List(el) { try {
 		readCard($list.find('.list-card'));
 		setTimeout(el.list.calc);
 	});
-
-    } catch (err) {
-        console.log("List", err);
-    }
 };
 
 //.list-card pseudo
@@ -316,4 +302,3 @@ function showExcelExport() {
 
     return false
 };
-
